@@ -1,0 +1,51 @@
+// geno: genome fasta file, one chrom
+// vcf: vcf file to the chrom
+// chr: name of chr
+// rep: rep of this run
+
+
+initialize() {
+    defineConstant("N_INIT", 2924906);
+    defineConstant("N_MID", 818390);
+    defineConstant("N_END", asInteger((33064+29339+27916)/3));
+    defineConstant("SAMPLE_SIZES", c(18,15,16));
+    initializeSLiMOptions(nucleotideBased=T);
+    length = initializeAncestralNucleotides(geno);
+    defineConstant("L", length);
+    initializeMutationTypeNuc("m1", 0.5, "f", 0.0);
+    initializeRecombinationRate(1e-8);
+    initializeGenomicElementType("g1", m1, 1.0, mmJukesCantor(0.0));
+    initializeGenomicElement(g1, 0, L-1);
+}
+
+1 early() {
+    sim.addSubpop("p0", 22);
+    p0.genomes.readFromVCF(vcf, m1);
+    p0.setSubpopulationSize(N_INIT);
+}
+
+1:4 early() {
+    t = sim.cycle - 1;           // 0,1,2,3
+    steps = 4;                        //
+    N = asInteger(N_INIT - (N_INIT - N_MID) * t / steps);
+    p0.setSubpopulationSize(max(N, 1));
+}
+
+5 early() {
+    p0.setSubpopulationSize(N_MID);
+    samples = sample(p0.individuals, 23);
+    samples.genomes.outputVCF("rep_" + rep + "." + chr + ".sim.his80.vcf", simplifyNucleotides=T);
+}
+
+6:15 early() {
+    t = sim.cycle - 5;           // 1~10
+    steps = 10;
+    N = asInteger(N_MID - (N_MID - N_END) * t / steps);
+    p0.setSubpopulationSize(max(N, 1));
+}
+
+15 late() {
+    total_samples = sum(SAMPLE_SIZES);
+    samples = sample(p0.individuals, total_samples);
+    samples.genomes.outputVCF("rep_" + rep + "." + chr + ".sim.vcf", simplifyNucleotides=T);
+}
